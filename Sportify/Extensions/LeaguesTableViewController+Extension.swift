@@ -9,14 +9,21 @@ extension LeaguesTableViewController: UITableViewDataSource, UITableViewDelegate
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return leagues.count
+        return searchResults.count
+
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "LeaguesCell", for: indexPath) as! LeaguesTableViewCell
         
-        let league = leagues[indexPath.row]
+        let league: ResultFootball
         
+        if leaguesSearchBar.text == "" {
+            league = leagues[indexPath.row]
+        } else {
+            league = searchResults[indexPath.row]
+        }
+
         cell.leagueNameLabel.text = league.league_name
         
         if let logoUrl = league.league_logo, let url = URL(string: logoUrl) {
@@ -41,7 +48,7 @@ extension LeaguesTableViewController: UITableViewDataSource, UITableViewDelegate
         if manager!.isReachableViaWiFi() {
             let viewController = storyboard?.instantiateViewController(identifier: "LeagueDetailsViewController") as! LeagueDetailsViewController
             
-            viewController.leagueID = leagues[indexPath.row].league_key!
+            viewController.leagueID = searchResults[indexPath.row].league_key!
             viewController.sport = self.sport
             
             self.navigationController?.pushViewController(viewController, animated: true)
@@ -53,4 +60,18 @@ extension LeaguesTableViewController: UITableViewDataSource, UITableViewDelegate
         alert.addAction(okAction)
         present(alert, animated: true, completion: nil)
     }
+}
+
+extension LeaguesTableViewController: UISearchBarDelegate {
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.isEmpty {
+            searchResults = leagues
+        } else {
+            searchResults = leagues.filter { $0.league_name?.lowercased().contains(searchText.lowercased()) ?? false }
+        }
+
+        leaguesTableView.reloadData()
+    }
+    
 }

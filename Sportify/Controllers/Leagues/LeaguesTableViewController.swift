@@ -5,6 +5,7 @@ import Kingfisher
 class LeaguesTableViewController: UIViewController {
     
     @IBOutlet weak var leaguesTableView: UITableView!
+    @IBOutlet weak var leaguesSearchBar: UISearchBar!
     
     var reachability: Reachability?
     var manager: ReachabilityNetworkManager?
@@ -13,7 +14,8 @@ class LeaguesTableViewController: UIViewController {
     
     var sport = ""
     var leagues: [ResultFootball] = []
-    
+    var searchResults : [ResultFootball] = []
+
     let defaultImages: [String: String] = [
         "football": "placeholder_football",
         "basketball": "placeholder_basketball",
@@ -27,6 +29,21 @@ class LeaguesTableViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        createIndicator()
+        
+        reachability = try? Reachability()
+        manager = ReachabilityNetworkManager(reachability: reachability)
+        
+        if manager!.isReachableViaWiFi() {
+            activityIndicator.startAnimating()
+            fetchData() { [weak self] in
+                self?.searchResults = self?.leagues ?? []
+                self?.leaguesTableView.reloadData()
+            }
+        }
+    }
+    
+    func createIndicator() {
         containerView.frame = view.frame
         containerView.backgroundColor = .systemBackground
         containerView.addSubview(activityIndicator)
@@ -37,18 +54,9 @@ class LeaguesTableViewController: UIViewController {
         ])
         
         view.addSubview(containerView)
-        
-        reachability = try? Reachability()
-        manager = ReachabilityNetworkManager(reachability: reachability)
-        
-        if manager!.isReachableViaWiFi() {
-            activityIndicator.startAnimating()
-            
-            fetchData()
-        }
     }
     
-    func fetchData() {
+    func fetchData(completion: @escaping () -> Void) {
         leaguesNetworkService.getAllLeagues(forSport: sport) { [weak self] results, error in
             guard let self = self, let results = results else {
                 if let error = error {
@@ -59,12 +67,13 @@ class LeaguesTableViewController: UIViewController {
                 return
             }
             self.leagues = results
-            
+
             DispatchQueue.main.async {
                 self.leaguesTableView.reloadData()
-                
+
                 self.activityIndicator.stopAnimating()
                 self.containerView.isHidden = true
+                completion()
             }
         }
     }
